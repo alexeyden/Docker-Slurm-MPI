@@ -1,0 +1,16 @@
+FROM centos:7.2.1511  
+
+RUN yum -y install openssh-server
+RUN yum -y install openssh-clients
+RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+RUN sshd-keygen
+
+ADD files/sshd_config /etc/ssh/sshd_config 
+# ADD files/sshrc /etc/ssh/sshrc
+# RUN chmod 644 /etc/ssh/sshrc 
+
+RUN yum -y install openmpi
+RUN yum -y install openmpi-devel
+
+ADD files/test /opt/mpitest
+RUN chmod 777 /opt/mpitest

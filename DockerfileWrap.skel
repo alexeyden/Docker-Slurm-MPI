@@ -1,0 +1,6 @@
+echo "
+FROM mpi_base 
+
+RUN useradd -u $(id -u) $(id -un)
+RUN echo "$(id -un):$(id -un)" | chpasswd
+"

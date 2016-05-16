@@ -1,0 +1,15 @@
+FROM test 
+
+RUN yum -y install openssh-server
+RUN yum -y install openmpi
+RUN yum -y install openmpi-devel
+RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+RUN sshd-keygen
+RUN useradd user
+RUN echo "user:123" | chpasswd
+
+ADD files/sshd_config /etc/ssh/sshd_config 
+ADD files/id_rsa.pub /home/user/.ssh/authorized_keys
+ADD files/test.c /home/user/test.c
+
+CMD ["/usr/sbin/sshd", "-D"]

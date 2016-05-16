@@ -1,0 +1,4 @@
+Host node20.triton.icmm.ru
+	HostName node20
+	User user
+	Port 2222
