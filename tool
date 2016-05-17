@@ -7,8 +7,8 @@ WRAP_IMAGE=mpi_task_1234
 
 SSH_CMD="/usr/sbin/sshd -D"
 SSH_PORT=2222
-
-NODES="node20"
+HOST_CMD="(source /etc/profile && module load mpi/openmpi-x86_64; mpirun /opt/mpitest; echo exit $?)"
+update_image=0
 
 ################################################################################
 
@@ -19,7 +19,7 @@ message() {
 ################################################################################
 
 build_base() {
- message 3 "Building base image.."
+ message 2 "Building base image.."
  
  cp ~/.ssh/id_rsa.pub files/tmp_id_rsa.pub
 
@@ -27,7 +27,7 @@ build_base() {
 }
 
 build_wrap() {
- message 3 "Building wrapping image.."
+ message 2 "Building wrapping image.."
 
  tmp_file=$(mktemp DockerfileWrap.XXXXXXXX)
  bash DockerfileWrap.skel > $tmp_file
@@ -47,11 +47,11 @@ build() {
 run() {
  message 2 "Bulding images.."
 
- build 
+ [[ $update_image == 1 ]] && build 
 
  message 2 "Saving $WRAP_IMAGE image to /shared/tmp/images/${WRAP_IMAGE}.tar"
 
- docker save -o /shared/tmp/images/${WRAP_IMAGE}.tar $WRAP_IMAGE
+ [[ $update_image == 1 ]] && docker save -o /shared/tmp/images/${WRAP_IMAGE}.tar $WRAP_IMAGE
 
  message 2 "Copying ssh configs .."
 
@@ -92,13 +92,132 @@ run() {
 	$WRAP_IMAGE $1 
 }
 
+expand-node-list() {
+ groups=$(echo $1 | tr "," "\n" | tr -d "node[]") 
+ excl=$2
+ 
+ nodes=""
+ for line in $groups; do
+  for num in $(echo $line | tr "-" " " | xargs seq); do
+   if [[ node$num != $excl ]]; then 
+   	nodes="$nodes node$num"
+   fi
+  done
+ done
+
+ echo $nodes
+}
+
+slurm-start() {
+ message 2 "Bulding images.."
+
+ [[ $update_image == 1 ]] && build 
+
+ message 2 "Saving $WRAP_IMAGE image to /shared/tmp/images/${WRAP_IMAGE}.tar"
+
+ [[ $update_image == 1 ]] && docker save -o /shared/tmp/images/${WRAP_IMAGE}.tar $WRAP_IMAGE
+
+ message 2 "Copying ssh configs .."
+
+ rm -rf /shared/tmp/ssh/$WRAP_IMAGE
+ mkdir /shared/tmp/ssh/$WRAP_IMAGE
+ cp ~/.ssh/id_rsa* /shared/tmp/ssh/$WRAP_IMAGE/
+ cp ~/.ssh/id_rsa.pub /shared/tmp/ssh/$WRAP_IMAGE/authorized_keys
+ cp files/config /shared/tmp/ssh/$WRAP_IMAGE/config
+
+ message 2 "Running sbatch.."
+ sbatch -p debug -N 2 --ntasks-per-node=1 --exclusive  --wrap  'srun ~/image/tool slurm-entry'
+}
+
+slurm-entry() {
+ if [[ $SLURM_NODEID == "0" ]]; then
+  slurm-host
+ else
+  slurm-node
+ fi
+}
+
+slurm-host() {
+ node=$SLURM_TOPOLOGY_ADDR
+
+ message 2 "Node $node (host): loading image.."
+ [[ $update_image == 1 ]] && docker load -i /shared/tmp/images/${WRAP_IMAGE}.tar
+
+ message 2 "Node $node (host): awaiting nodes.."
+ nodes=$(expand-node-list $SLURM_JOB_NODELIST $node)
+ message 2 "Node $node (host): node list is $nodes $node (host)"
+
+ for n in $nodes; do
+  message 2 "Node $node (host): waiting node $n to start up.."
+
+  until nc -zv $n $SSH_PORT > /dev/null 2>&1; do
+   sleep 0.2
+  done
+
+  ssh-keyscan -p $SSH_PORT $n | sed "s/$n/[$n]:$SSH_PORT/g" >> /shared/tmp/ssh/$WRAP_IMAGE/known_hosts
+  message 2 "Node $node (host): node $n is up.."
+ done
+
+ message 2 "Node $node (host): starting host image.."
+ env | grep 'SLURM' > /shared/tmp/images/${WRAP_IMAGE}-$SLURM_NODEID-env
+
+ docker run \
+	--net=host \
+	-v /shared/home/$USER/:/home/$USER/ \
+ 	-v /shared/tmp/ssh/$WRAP_IMAGE/:/home/$USER/.ssh/ \
+ 	-u $(id -un) \
+	--env-file="/shared/tmp/images/${WRAP_IMAGE}-$SLURM_NODEID-env" \
+	$WRAP_IMAGE bash -c "$HOST_CMD" 
+ 
+ message 2 "Node $node (host): terminating nodes"
+ 
+ scancel -s USR1 $SLURM_JOBID 
+
+ exit 0
+}
+
+slurm-node() {
+ node=$SLURM_TOPOLOGY_ADDR
+
+ message 4 "Node $node: loading image.."
+ [[ $update_image == 1 ]] && docker load -i /shared/tmp/images/${WRAP_IMAGE}.tar
+
+ env | grep 'SLURM' > /shared/tmp/images/${WRAP_IMAGE}-$SLURM_NODEID-env
+
+ message 4 "Node $node: running container.."
+
+ container_id=$(docker run --net=host  -v /shared/home/$USER/:/home/$USER/ \
+			-v /shared/tmp/ssh/$WRAP_IMAGE/:/home/$USER/.ssh/ \
+			--env-file=/shared/tmp/images/${WRAP_IMAGE}-$SLURM_NODEID-env \
+			-d $WRAP_IMAGE $SSH_CMD)
+
+ message 4 "Node $node: node is up"
+ 
+ trap "slurm-node-term $container_id" SIGINT SIGTERM USR1 
+ 
+ while true; do
+  sleep 1s
+ done
+}
+
+slurm-node-term() {
+ node=$SLURM_TOPOLOGY_ADDR
+ 
+ message 4 "Node $node: terminating node"
+ 
+ #docker stop $1  
+ #docker rm $1
+ 
+ exit 0
+}
+
 run-mpitest() {
  docker run \
 	--net=host \
 	-v /shared/home/$USER/:/home/$USER/ \
 	-v /shared/tmp/ssh/$WRAP_IMAGE/:/home/$USER/.ssh/ \
 	-u $(id -un) \
-	$WRAP_IMAGE /usr/lib64/openmpi/bin/mpirun --prefix /usr/lib64/openmpi -H n20 -n 16 /opt/mpitest
+	$WRAP_IMAGE /usr/lib64/openmpi/bin/mpirun --prefix /usr/lib64/openmpi -H node20 -n 16 /opt/mpitest
 }
 
 run-shell() {
@@ -110,6 +229,21 @@ run-shell() {
 	$WRAP_IMAGE /bin/bash
 }
 
+run-ssh() {
+ docker run --net=host  -v /shared/home/$USER/:/home/$USER/ \
+			-v /shared/tmp/ssh/$WRAP_IMAGE/:/home/$USER/.ssh/ \
+			-d $WRAP_IMAGE $SSH_CMD
+}
+
+clean() {
+ rm -rf slurm-*.out
+}
+
 ################################################################################
 
-$1 $2
+if [[ -z $1 ]]; then
+ slurm-start
+else
+ $1 $2
+fi
+

@@ -1,3 +1,150 @@
-Host n20
+Host node1
+	HostName node1
+	Port 2222
+Host node2
+	HostName node2
+	Port 2222
+Host node3
+	HostName node3
+	Port 2222
+Host node4
+	HostName node4
+	Port 2222
+Host node5
+	HostName node5
+	Port 2222
+Host node6
+	HostName node6
+	Port 2222
+Host node7
+	HostName node7
+	Port 2222
+Host node8
+	HostName node8
+	Port 2222
+Host node9
+	HostName node9
+	Port 2222
+Host node10
+	HostName node10
+	Port 2222
+Host node11
+	HostName node11
+	Port 2222
+Host node12
+	HostName node12
+	Port 2222
+Host node13
+	HostName node13
+	Port 2222
+Host node14
+	HostName node14
+	Port 2222
+Host node15
+	HostName node15
+	Port 2222
+Host node16
+	HostName node16
+	Port 2222
+Host node17
+	HostName node17
+	Port 2222
+Host node18
+	HostName node18
+	Port 2222
+Host node19
+	HostName node19
+	Port 2222
+Host node20
 	HostName node20
+	Port 2222
+Host node21
+	HostName node21
+	Port 2222
+Host node22
+	HostName node22
+	Port 2222
+Host node23
+	HostName node23
+	Port 2222
+Host node24
+	HostName node24
+	Port 2222
+Host node25
+	HostName node25
+	Port 2222
+Host node26
+	HostName node26
+	Port 2222
+Host node27
+	HostName node27
+	Port 2222
+Host node28
+	HostName node28
+	Port 2222
+Host node29
+	HostName node29
+	Port 2222
+Host node30
+	HostName node30
+	Port 2222
+Host node31
+	HostName node31
+	Port 2222
+Host node32
+	HostName node32
+	Port 2222
+Host node33
+	HostName node33
+	Port 2222
+Host node34
+	HostName node34
+	Port 2222
+Host node35
+	HostName node35
+	Port 2222
+Host node36
+	HostName node36
+	Port 2222
+Host node37
+	HostName node37
+	Port 2222
+Host node38
+	HostName node38
+	Port 2222
+Host node39
+	HostName node39
+	Port 2222
+Host node40
+	HostName node40
+	Port 2222
+Host node41
+	HostName node41
+	Port 2222
+Host node42
+	HostName node42
+	Port 2222
+Host node43
+	HostName node43
+	Port 2222
+Host node44
+	HostName node44
+	Port 2222
+Host node45
+	HostName node45
+	Port 2222
+Host node46
+	HostName node46
+	Port 2222
+Host node47
+	HostName node47
+	Port 2222
+Host node48
+	HostName node48
+	Port 2222
+Host node49
+	HostName node49
+	Port 2222
+Host node50
+	HostName node50
 	Port 2222

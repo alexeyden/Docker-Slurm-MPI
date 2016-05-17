@@ -1,0 +1,16 @@
+[32mNode node19 (host): loading image..[39m
+[32mNode node19 (host): awaiting nodes..[39m
+[32mNode node19 (host): node list is node20 node19 (host)[39m
+[32mNode node19 (host): waiting node node20 to start up..[39m
+[34mNode node20: loading image..[39m
+# node20 SSH-2.0-OpenSSH_6.6.1
+[34mNode node20: running container..[39m
+[32mNode node19 (host): node node20 is up..[39m
+[32mNode node19 (host): starting host image..[39m
+[34mNode node20: node is up[39m
+[node19.triton.icmm.ru:00026] [[13263,0],0] ORTE_ERROR_LOG: Not found in file plm_slurm_module.c at line 420
+exit 0
+[32mNode node19 (host): terminating nodes[39m
+User defined signal 1
+[34mNode node20: terminating node[39m
+srun: error: node19: task 0: User defined signal 1
