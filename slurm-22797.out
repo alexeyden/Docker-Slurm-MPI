@@ -1,0 +1,47 @@
+[32mNode node19 (host): loading image..[39m
+[32mNode node19 (host): awaiting nodes..[39m
+[32mNode node19 (host): node list is node20 node19 (host)[39m
+[32mNode node19 (host): waiting node node20 to start up..[39m
+[34mNode node20: loading image..[39m
+[34mNode node20: running container..[39m
+[34mNode node20: node is up[39m
+# node20 SSH-2.0-OpenSSH_6.6.1
+[32mNode node19 (host): node node20 is up..[39m
+[32mNode node19 (host): starting host image..[39m
+[32mNode node19 (host): mpirun cmd is mpirun -np 16 --map-by ppr:8:node -H localhost,node20 /opt/mpitest[39m
+Warning: Permanently added the RSA host key for IP address '[10.129.1.20]:2222' to the list of known hosts.
+ModuleCmd_Load.c(213):ERROR:105: Unable to locate a modulefile for 'openmpi-x86_64'
+--------------------------------------------------------------------------
+[[13260,1],4]: A high-performance Open MPI point-to-point messaging module
+was unable to find any relevant network interfaces:
+
+Module: OpenFabrics (openib)
+  Host: node19
+
+Another transport will be used instead, although this may result in
+lower performance.
+--------------------------------------------------------------------------
+Hello world from processor node19.triton.icmm.ru, rank 3 out of 16 processors
+Hello world from processor node19.triton.icmm.ru, rank 4 out of 16 processors
+Hello world from processor node19.triton.icmm.ru, rank 5 out of 16 processors
+Hello world from processor node19.triton.icmm.ru, rank 6 out of 16 processors
+Hello world from processor node19.triton.icmm.ru, rank 0 out of 16 processors
+Hello world from processor node19.triton.icmm.ru, rank 1 out of 16 processors
+Hello world from processor node19.triton.icmm.ru, rank 2 out of 16 processors
+Hello world from processor node19.triton.icmm.ru, rank 7 out of 16 processors
+Hello world from processor node20.triton.icmm.ru, rank 12 out of 16 processors
+Hello world from processor node20.triton.icmm.ru, rank 13 out of 16 processors
+Hello world from processor node20.triton.icmm.ru, rank 14 out of 16 processors
+Hello world from processor node20.triton.icmm.ru, rank 15 out of 16 processors
+Hello world from processor node20.triton.icmm.ru, rank 8 out of 16 processors
+Hello world from processor node20.triton.icmm.ru, rank 9 out of 16 processors
+Hello world from processor node20.triton.icmm.ru, rank 11 out of 16 processors
+Hello world from processor node20.triton.icmm.ru, rank 10 out of 16 processors
+[node19.triton.icmm.ru:00025] 15 more processes have sent help message help-mpi-btl-base.txt / btl:no-nics
+[node19.triton.icmm.ru:00025] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages
+[32mNode node19 (host): terminating nodes[39m
+User defined signal 1
+[34mNode node20: terminating node[39m
+srun: error: node19: task 0: User defined signal 1
+81433ed6e9caf4c95d9ef349be2e1c5802711bdb7550d45ccef25158a221b0c1
+81433ed6e9caf4c95d9ef349be2e1c5802711bdb7550d45ccef25158a221b0c1

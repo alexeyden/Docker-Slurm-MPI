@@ -7,7 +7,7 @@ WRAP_IMAGE=mpi_task_1234
 
 SSH_CMD="/usr/sbin/sshd -D"
 SSH_PORT=2222
-HOST_CMD="(source /etc/profile && module load mpi/openmpi-x86_64; mpirun /opt/mpitest; echo exit $?)"
+MPI_CMD="/opt/mpitest"
 update_image=0
 
 ################################################################################
@@ -160,13 +160,17 @@ slurm-host() {
 
  message 2 "Node $node (host): starting host image.."
  env | grep 'SLURM' > /shared/tmp/images/${WRAP_IMAGE}-$SLURM_NODEID-env
+ 
+ MPIRUN_HOSTS=$(echo $nodes | tr " " ",")
+ MPIRUN_CMD="mpirun -np $(( $SLURM_NPROCS * $SLURM_CPUS_ON_NODE )) --map-by ppr:$SLURM_CPUS_ON_NODE:node -H localhost,$MPIRUN_HOSTS $MPI_CMD"
+ message 2 "Node $node (host): mpirun cmd is $MPIRUN_CMD"
+ HOST_CMD="(source /etc/profile && module load mpi/openmpi-x86_64; $MPIRUN_CMD)"
 
  docker run \
 	--net=host \
 	-v /shared/home/$USER/:/home/$USER/ \
  	-v /shared/tmp/ssh/$WRAP_IMAGE/:/home/$USER/.ssh/ \
  	-u $(id -un) \
-	--env-file="/shared/tmp/images/${WRAP_IMAGE}-$SLURM_NODEID-env" \
 	$WRAP_IMAGE bash -c "$HOST_CMD" 
  
  message 2 "Node $node (host): terminating nodes"
@@ -188,7 +192,6 @@ slurm-node() {
 
  container_id=$(docker run --net=host  -v /shared/home/$USER/:/home/$USER/ \
 			-v /shared/tmp/ssh/$WRAP_IMAGE/:/home/$USER/.ssh/ \
-			--env-file=/shared/tmp/images/${WRAP_IMAGE}-$SLURM_NODEID-env \
 			-d $WRAP_IMAGE $SSH_CMD)
 
  message 4 "Node $node: node is up"
@@ -205,8 +208,8 @@ slurm-node-term() {
  
  message 4 "Node $node: terminating node"
  
- #docker stop $1  
- #docker rm $1
+ docker stop $1  
+ docker rm $1
  
  exit 0
 }
