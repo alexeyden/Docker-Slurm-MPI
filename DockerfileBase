@@ -2,6 +2,7 @@ FROM centos:7.2.1511
 
 RUN yum -y install openssh-server
 RUN yum -y install openssh-clients
+RUN yum -y install mpitests-openmpi
 RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
 RUN sshd-keygen
 

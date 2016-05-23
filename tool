@@ -7,13 +7,14 @@ WRAP_IMAGE=mpi_task_1234
 
 SSH_CMD="/usr/sbin/sshd -D"
 SSH_PORT=2222
-MPI_CMD="/opt/mpitest"
+MPI_CMD="mpitests-osu_bcast"
 update_image=0
 
 ################################################################################
 
 message() {
- echo -e "\033[3$1m$2\033[39m"
+ #echo -e "\033[3$1m$2\033[39m"
+ echo ">>>> $2"
 }
 
 ################################################################################
@@ -43,54 +44,6 @@ build() {
 }
 
 ################################################################################
-
-run() {
- message 2 "Bulding images.."
-
- [[ $update_image == 1 ]] && build 
-
- message 2 "Saving $WRAP_IMAGE image to /shared/tmp/images/${WRAP_IMAGE}.tar"
-
- [[ $update_image == 1 ]] && docker save -o /shared/tmp/images/${WRAP_IMAGE}.tar $WRAP_IMAGE
-
- message 2 "Copying ssh configs .."
-
- rm -rf /shared/tmp/ssh/$WRAP_IMAGE
- mkdir /shared/tmp/ssh/$WRAP_IMAGE
- cp ~/.ssh/id_rsa* /shared/tmp/ssh/$WRAP_IMAGE/
- cp ~/.ssh/id_rsa.pub /shared/tmp/ssh/$WRAP_IMAGE/authorized_keys
- cp files/config /shared/tmp/ssh/$WRAP_IMAGE/config
-
- message 2 "Setting up nodes.."
-
- for node in $NODES; do
-  message 2 "Loading image on node $node .."
-
-  ssh $node "docker load -i /shared/tmp/images/${WRAP_IMAGE}.tar; \
-             docker run --net=host -v /shared/home/$USER/:/home/$USER/ \
-				   -v /shared/tmp/ssh/$WRAP_IMAGE/:/home/$USER/.ssh/ \
-				   -d $WRAP_IMAGE $SSH_CMD"
-
-  message 2 "Waiting node $node to start up.."
-  until nc -zv $node $SSH_PORT; do
-   sleep 0.2
-  done
-
-  ssh-keyscan -p $SSH_PORT $node | sed "s/$node/[$node]:$SSH_PORT/g" >> /shared/tmp/ssh/$WRAP_IMAGE/known_hosts
-
-  message 2 "$node is running.."
- done
-
- message 2 "Starting host image.."
-
- exit 0 
- docker run \
-	--net=host \
-	-v /shared/home/$USER/:/home/$USER/ \
- 	-v /shared/tmp/ssh/$WRAP_IMAGE/:/home/$USER/.ssh/ \
- 	-u $(id -un) \
-	$WRAP_IMAGE $1 
-}
 
 expand-node-list() {
  groups=$(echo $1 | tr "," "\n" | tr -d "node[]") 
@@ -158,24 +111,27 @@ slurm-host() {
   message 2 "Node $node (host): node $n is up.."
  done
 
+ ssh-keyscan -p $SSH_PORT $n | sed "s/$n/[$node]:$SSH_PORT/g" >> /shared/tmp/ssh/$WRAP_IMAGE/known_hosts
+ ssh-keyscan -p $SSH_PORT $n | sed "s/$n/[localhost]:$SSH_PORT/g" >> /shared/tmp/ssh/$WRAP_IMAGE/known_hosts
+
  message 2 "Node $node (host): starting host image.."
- env | grep 'SLURM' > /shared/tmp/images/${WRAP_IMAGE}-$SLURM_NODEID-env
  
  MPIRUN_HOSTS=$(echo $nodes | tr " " ",")
- MPIRUN_CMD="mpirun -np $(( $SLURM_NPROCS * $SLURM_CPUS_ON_NODE )) --map-by ppr:$SLURM_CPUS_ON_NODE:node -H localhost,$MPIRUN_HOSTS $MPI_CMD"
+ MPIRUN_CMD="mpirun -mca btl tcp,self -np $(( $SLURM_NPROCS * $SLURM_CPUS_ON_NODE )) --map-by ppr:$SLURM_CPUS_ON_NODE:node -H localhost,$MPIRUN_HOSTS $MPI_CMD"
  message 2 "Node $node (host): mpirun cmd is $MPIRUN_CMD"
- HOST_CMD="(source /etc/profile && module load mpi/openmpi-x86_64; $MPIRUN_CMD)"
+ HOST_CMD="/usr/sbin/sshd && su $(id -un) -c '(source /etc/profile && module load mpi/openmpi-x86_64; $MPIRUN_CMD)' && pkill sshd"
 
  docker run \
 	--net=host \
 	-v /shared/home/$USER/:/home/$USER/ \
  	-v /shared/tmp/ssh/$WRAP_IMAGE/:/home/$USER/.ssh/ \
- 	-u $(id -un) \
-	$WRAP_IMAGE bash -c "$HOST_CMD" 
+	--rm $WRAP_IMAGE bash -c "$HOST_CMD" 
  
  message 2 "Node $node (host): terminating nodes"
  
- scancel -s USR1 $SLURM_JOBID 
+ scancel -s USR1 $SLURM_JOBI
+
+ rm -rf /shared/tmp/ssh/$WRAP_IMAGE
 
  exit 0
 }
@@ -185,8 +141,6 @@ slurm-node() {
 
  message 4 "Node $node: loading image.."
  [[ $update_image == 1 ]] && docker load -i /shared/tmp/images/${WRAP_IMAGE}.tar
-
- env | grep 'SLURM' > /shared/tmp/images/${WRAP_IMAGE}-$SLURM_NODEID-env
 
  message 4 "Node $node: running container.."
 
@@ -223,7 +177,9 @@ run-mpitest() {
 	$WRAP_IMAGE /usr/lib64/openmpi/bin/mpirun --prefix /usr/lib64/openmpi -H node20 -n 16 /opt/mpitest
 }
 
-run-shell() {
+debug-host() {
+ ssh-keyscan -p $SSH_PORT node20 | sed "s/node20/[node20]:$SSH_PORT/g" >> /shared/tmp/ssh/$WRAP_IMAGE/known_hosts
+ ssh-keyscan -p $SSH_PORT node20 | sed "s/node20/[localhost]:$SSH_PORT/g" >> /shared/tmp/ssh/$WRAP_IMAGE/known_hosts
  docker run \
 	--net=host \
 	-v /shared/home/$USER/:/home/$USER/ \
@@ -232,10 +188,16 @@ run-shell() {
 	$WRAP_IMAGE /bin/bash
 }
 
-run-ssh() {
+debug-node() {
+ rm -rf /shared/tmp/ssh/$WRAP_IMAGE
+ mkdir /shared/tmp/ssh/$WRAP_IMAGE
+ cp ~/.ssh/id_rsa* /shared/tmp/ssh/$WRAP_IMAGE/
+ cp ~/.ssh/id_rsa.pub /shared/tmp/ssh/$WRAP_IMAGE/authorized_keys
+ cp files/config /shared/tmp/ssh/$WRAP_IMAGE/config
+
  docker run --net=host  -v /shared/home/$USER/:/home/$USER/ \
 			-v /shared/tmp/ssh/$WRAP_IMAGE/:/home/$USER/.ssh/ \
-			-d $WRAP_IMAGE $SSH_CMD
+			$WRAP_IMAGE /usr/sbin/sshd -D -dd
 }
 
 clean() {
