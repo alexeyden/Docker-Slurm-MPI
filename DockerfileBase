@@ -6,10 +6,6 @@ RUN yum -y install mpitests-openmpi
 RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
 RUN sshd-keygen
 
-ADD files/sshd_config /etc/ssh/sshd_config 
-# ADD files/sshrc /etc/ssh/sshrc
-# RUN chmod 644 /etc/ssh/sshrc 
-
 RUN yum -y install openmpi
 RUN yum -y install openmpi-devel
 

@@ -7,7 +7,8 @@ WRAP_IMAGE=mpi_task_1234
 
 SSH_CMD="/usr/sbin/sshd -D"
 SSH_PORT=2222
-MPI_CMD="mpitests-osu_bcast"
+MPI_CMD="mpitests-osu_bcast" #"/opt/mpitest"
+SUBNET="10.128.0.0/11"
 update_image=0
 
 ################################################################################
@@ -117,7 +118,7 @@ slurm-host() {
  message 2 "Node $node (host): starting host image.."
  
  MPIRUN_HOSTS=$(echo $nodes | tr " " ",")
- MPIRUN_CMD="mpirun -mca btl tcp,self -np $(( $SLURM_NPROCS * $SLURM_CPUS_ON_NODE )) --map-by ppr:$SLURM_CPUS_ON_NODE:node -H localhost,$MPIRUN_HOSTS $MPI_CMD"
+ MPIRUN_CMD="mpirun -mca btl tcp,sm,self --mca btl_tcp_if_include $SUBNET -np $(( $SLURM_NPROCS * $SLURM_CPUS_ON_NODE )) --map-by ppr:$SLURM_CPUS_ON_NODE:node -H $MPIRUN_HOSTS,$node $MPI_CMD"
  message 2 "Node $node (host): mpirun cmd is $MPIRUN_CMD"
  HOST_CMD="/usr/sbin/sshd && su $(id -un) -c '(source /etc/profile && module load mpi/openmpi-x86_64; $MPIRUN_CMD)' && pkill sshd"
 
@@ -129,7 +130,7 @@ slurm-host() {
  
  message 2 "Node $node (host): terminating nodes"
  
- scancel -s USR1 $SLURM_JOBI
+ scancel -s USR1 $SLURM_JOB_ID
 
  rm -rf /shared/tmp/ssh/$WRAP_IMAGE
 
@@ -166,15 +167,6 @@ slurm-node-term() {
  docker rm $1
  
  exit 0
-}
-
-run-mpitest() {
- docker run \
-	--net=host \
-	-v /shared/home/$USER/:/home/$USER/ \
-	-v /shared/tmp/ssh/$WRAP_IMAGE/:/home/$USER/.ssh/ \
-	-u $(id -un) \
-	$WRAP_IMAGE /usr/lib64/openmpi/bin/mpirun --prefix /usr/lib64/openmpi -H node20 -n 16 /opt/mpitest
 }
 
 debug-host() {

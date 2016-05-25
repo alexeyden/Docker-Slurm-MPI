@@ -1,6 +1,8 @@
 echo "
 FROM mpi_base 
 
+ADD files/sshd_config /etc/ssh/sshd_config 
+
 RUN groupadd $(id -ng) -g $(id -g)  
 RUN useradd -u $(id -u) $(id -un) -G $(id -ng)
 RUN echo "$(id -un):$(id -un)" | chpasswd
